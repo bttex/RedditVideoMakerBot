@@ -36,7 +36,9 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
     # set the theme and disable non-essential cookies
     if settings.config["settings"]["theme"] == "dark":
-        cookie_file = open("./video_creation/data/cookie-dark-mode.json", encoding="utf-8")
+        cookie_file = open(
+            "./video_creation/data/cookie-dark-mode.json", encoding="utf-8"
+        )
         bgcolor = (33, 33, 36, 255)
         txtcolor = (240, 240, 240)
         transparent = False
@@ -46,15 +48,21 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             bgcolor = (0, 0, 0, 0)
             txtcolor = (255, 255, 255)
             transparent = True
-            cookie_file = open("./video_creation/data/cookie-dark-mode.json", encoding="utf-8")
+            cookie_file = open(
+                "./video_creation/data/cookie-dark-mode.json", encoding="utf-8"
+            )
         else:
             # Switch to dark theme
-            cookie_file = open("./video_creation/data/cookie-dark-mode.json", encoding="utf-8")
+            cookie_file = open(
+                "./video_creation/data/cookie-dark-mode.json", encoding="utf-8"
+            )
             bgcolor = (33, 33, 36, 255)
             txtcolor = (240, 240, 240)
             transparent = False
     else:
-        cookie_file = open("./video_creation/data/cookie-light-mode.json", encoding="utf-8")
+        cookie_file = open(
+            "./video_creation/data/cookie-light-mode.json", encoding="utf-8"
+        )
         bgcolor = (255, 255, 255, 255)
         txtcolor = (0, 0, 0)
         transparent = False
@@ -100,8 +108,12 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         page.set_viewport_size(ViewportSize(width=1920, height=1080))
         page.wait_for_load_state()
 
-        page.locator(f'input[name="username"]').fill(settings.config["reddit"]["creds"]["username"])
-        page.locator(f'input[name="password"]').fill(settings.config["reddit"]["creds"]["password"])
+        page.locator(f'input[name="username"]').fill(
+            settings.config["reddit"]["creds"]["username"]
+        )
+        page.locator(f'input[name="password"]').fill(
+            settings.config["reddit"]["creds"]["password"]
+        )
         page.get_by_role("button", name="Log In").click()
         page.wait_for_timeout(5000)
 
@@ -171,18 +183,29 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
         postcontentpath = f"assets/temp/{reddit_id}/png/title.png"
         try:
-            if settings.config["settings"]["zoom"] != 1:
-                # store zoom settings
-                zoom = settings.config["settings"]["zoom"]
-                # zoom the body of the page
-                page.evaluate("document.body.style.zoom=" + str(zoom))
-                # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
-                location = page.locator('[data-test-id="post-content"]').bounding_box()
-                for i in location:
-                    location[i] = float("{:.2f}".format(location[i] * zoom))
-                page.screenshot(clip=location, path=postcontentpath)
+            post_content = page.locator('div[id$="-post-rtjson-content"]')
+
+            # Verifica se o conteúdo existe e está visível
+            if post_content.count() > 0 and post_content.first.is_visible():
+                if settings.config["settings"]["zoom"] != 1:
+                    # store zoom settings
+                    zoom = settings.config["settings"]["zoom"]
+                    # zoom the body of the page
+                    page.evaluate("document.body.style.zoom=" + str(zoom))
+                    # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
+                    location = post_content.first.bounding_box()
+                    for key in location:
+                        location[key] = float("{:.2f}".format(location[key] * zoom))
+                    page.screenshot(clip=location, path=postcontentpath)
+                else:
+                    post_content.first.screenshot(path=postcontentpath)
             else:
-                page.locator('[data-test-id="post-content"]').screenshot(path=postcontentpath)
+                # Conteúdo vazio ou inexistente, capturar o título
+                title_element = page.locator("#post-title-t3_" + reddit_id)
+                if title_element.count() > 0 and title_element.first.is_visible():
+                    title_element.first.screenshot(path=postcontentpath)
+                else:
+                    print_substep("Título não encontrado!", style="red")
         except Exception as e:
             print_substep("Something went wrong!", style="red")
             resp = input(
@@ -196,7 +219,9 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                     "green",
                 )
 
-            resp = input("Do you want the error traceback for debugging purposes? (y/n)")
+            resp = input(
+                "Do you want the error traceback for debugging purposes? (y/n)"
+            )
             if not resp.casefold().startswith("y"):
                 exit()
 
@@ -213,7 +238,6 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                     "Downloading screenshots...",
                 )
             ):
-                # Stop if we have reached the screenshot_num
                 if idx >= screenshot_num:
                     break
 
@@ -222,8 +246,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
                 page.goto(f"https://new.reddit.com/{comment['comment_url']}")
 
-                # translate code
-
+                # Translate comment text if needed
                 if settings.config["reddit"]["thread"]["post_lang"]:
                     comment_tl = translators.translate_text(
                         comment["comment_body"],
@@ -231,19 +254,20 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         to_language=settings.config["reddit"]["thread"]["post_lang"],
                     )
                     page.evaluate(
-                        '([tl_content, tl_id]) => document.querySelector(`#t1_${tl_id} > div:nth-child(2) > div > div[data-testid="comment"] > div`).textContent = tl_content',
+                        '([tl_content, tl_id]) => { const el = document.querySelector(`#t1_${tl_id} div[id$="-comment-rtjson-content"]`); if (el) el.textContent = tl_content; }',
                         [comment_tl, comment["comment_id"]],
                     )
+
                 try:
                     if settings.config["settings"]["zoom"] != 1:
-                        # store zoom settings
                         zoom = settings.config["settings"]["zoom"]
-                        # zoom the body of the page
                         page.evaluate("document.body.style.zoom=" + str(zoom))
-                        # scroll comment into view
-                        page.locator(f"#t1_{comment['comment_id']}").scroll_into_view_if_needed()
-                        # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
-                        location = page.locator(f"#t1_{comment['comment_id']}").bounding_box()
+
+                        comment_element = page.locator(
+                            "div[id$='-comment-rtjson-content']"
+                        )
+                        comment_element.scroll_into_view_if_needed()
+                        location = comment_element.bounding_box()
                         for i in location:
                             location[i] = float("{:.2f}".format(location[i] * zoom))
                         page.screenshot(
@@ -251,7 +275,9 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             path=f"assets/temp/{reddit_id}/png/comment_{idx}.png",
                         )
                     else:
-                        page.locator(f"#t1_{comment['comment_id']}").screenshot(
+                        page.wait_for_selector(
+                            "div[id$='-comment-rtjson-content']"
+                        ).screenshot(
                             path=f"assets/temp/{reddit_id}/png/comment_{idx}.png"
                         )
                 except TimeoutError:

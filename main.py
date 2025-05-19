@@ -63,7 +63,7 @@ def main(POST_ID=None) -> None:
 def run_many(times) -> None:
     for x in range(1, times + 1):
         print_step(
-            f'on the {x}{("th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th")[x % 10]} iteration of {times}'
+            f"on the {x}{('th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th')[x % 10]} iteration of {times}"
         )  # correct 1st 2nd 3rd 4th 5th....
         main()
         Popen("cls" if name == "nt" else "clear", shell=True).wait()
@@ -79,7 +79,7 @@ def shutdown() -> NoReturn:
 
 
 if __name__ == "__main__":
-    if sys.version_info.major != 3 or sys.version_info.minor not in [10, 11]:
+    if sys.version_info.major != 3 or sys.version_info.minor not in [10, 11, 12]:
         print(
             "Hey! Congratulations, you've made it so far (which is pretty rare with no Python 3.10). Unfortunately, this program only works on Python 3.10. Please install Python 3.10 and try again."
         )
@@ -102,10 +102,12 @@ if __name__ == "__main__":
         sys.exit()
     try:
         if config["reddit"]["thread"]["post_id"]:
-            for index, post_id in enumerate(config["reddit"]["thread"]["post_id"].split("+")):
+            for index, post_id in enumerate(
+                config["reddit"]["thread"]["post_id"].split("+")
+            ):
                 index += 1
                 print_step(
-                    f'on the {index}{("st" if index % 10 == 1 else ("nd" if index % 10 == 2 else ("rd" if index % 10 == 3 else "th")))} post of {len(config["reddit"]["thread"]["post_id"].split("+"))}'
+                    f"on the {index}{('st' if index % 10 == 1 else ('nd' if index % 10 == 2 else ('rd' if index % 10 == 3 else 'th')))} post of {len(config['reddit']['thread']['post_id'].split('+'))}"
                 )
                 main(post_id)
                 Popen("cls" if name == "nt" else "clear", shell=True).wait()
@@ -126,6 +128,6 @@ if __name__ == "__main__":
             f"Sorry, something went wrong with this version! Try again, and feel free to report this issue at GitHub or the Discord community.\n"
             f"Version: {__VERSION__} \n"
             f"Error: {err} \n"
-            f'Config: {config["settings"]}'
+            f"Config: {config['settings']}"
         )
         raise err
